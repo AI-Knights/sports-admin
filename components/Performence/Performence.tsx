@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { TrendingUp, TrendingDown, Users, Activity, AlertTriangle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useChartEngagementQuery, useErrorsDataQuery, useGetMonitoringDataQuery, useResoursUseQuery, useSummaryDataQuery } from '@/store/api/monitoring/monitoring';
+import Card from './Card';
 
 // Types
 interface MetricCard {
@@ -30,34 +32,10 @@ interface NewsArticle {
   views: string;
 }
 
-// Sample Data
-const serverLoadData = [
-  { month: 'Jan', cpu: 65, memory: 45 },
-  { month: 'Feb', cpu: 68, memory: 48 },
-  { month: 'Mar', cpu: 72, memory: 52 },
-  { month: 'Apr', cpu: 85, memory: 68 },
-  { month: 'May', cpu: 78, memory: 62 },
-  { month: 'Jun', cpu: 75, memory: 58 },
-  { month: 'Jul', cpu: 82, memory: 65 }
-];
 
-const apiResponseData = [
-  { day: 'yesterday', time: 450 },
-  { day: 'weekday', time: 320 },
-  { day: 'weekend', time: 380 },
-  { day: 'Wednesday', time: 290 },
-  { day: 'Myday/holiday', time: 520 }
-];
 
-const userEngagementData = [
-  { month: 'Jan', pageViews: 28000, activeUsers: 18000 },
-  { month: 'Feb', pageViews: 32000, activeUsers: 22000 },
-  { month: 'Mar', pageViews: 35000, activeUsers: 24000 },
-  { month: 'Apr', pageViews: 38000, activeUsers: 26000 },
-  { month: 'May', pageViews: 42000, activeUsers: 28000 },
-  { month: 'Jun', pageViews: 45000, activeUsers: 30000 },
-  { month: 'Jul', pageViews: 48000, activeUsers: 32000 }
-];
+
+
 
 const errorLogs: ErrorLog[] = [
   {
@@ -111,6 +89,16 @@ const newsArticles: NewsArticle[] = [
 ];
 
 export default function PerformanceMonitoring() {
+  const { data: responseTimeByEndpoint } = useGetMonitoringDataQuery()
+  // console.log(responseTimeByEndpoint)
+  const { data: ChartEngagement } = useChartEngagementQuery()
+
+  const { data: resoursUse } = useResoursUseQuery()
+
+  const { data: errorsData } = useErrorsDataQuery()
+
+  const { data: summaryData } = useSummaryDataQuery()
+  // console.log(resoursUse)
   const metricCards: MetricCard[] = [
     {
       title: 'Server Load',
@@ -164,34 +152,13 @@ export default function PerformanceMonitoring() {
         </div>
       </header>
 
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="p-6  mx-auto space-y-6">
         {/* Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {metricCards.map((card, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                  {card.icon}
-                </div>
-                <div className={`flex items-center gap-1 text-sm font-semibold ${
-                  card.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {card.trend === 'up' ? (
-                    <TrendingUp className="w-4 h-4" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4" />
-                  )}
-                  {card.change}
-                </div>
-              </div>
-              <h3 className="text-sm text-slate-600 mb-1">{card.title}</h3>
-              <p className="text-2xl font-bold text-slate-900">{card.value}</p>
-            </div>
-          ))}
-        </div>
+       
+
+        <Card metrics={summaryData} />
+
+    
 
         {/* Server Load & Resource Usage Chart */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -199,39 +166,39 @@ export default function PerformanceMonitoring() {
             Server Load & Resource Usage
           </h2>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={serverLoadData}>
+            <LineChart data={resoursUse}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis 
-                dataKey="month" 
+              <XAxis
+                dataKey="time"
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: '#e2e8f0' }}
               />
-              <YAxis 
+              <YAxis
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: '#e2e8f0' }}
               />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#fff', 
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#fff',
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px'
                 }}
               />
-              <Legend 
+              <Legend
                 wrapperStyle={{ fontSize: '14px' }}
               />
-              <Line 
-                type="monotone" 
-                dataKey="cpu" 
-                stroke="#3b82f6" 
+              <Line
+                type="monotone"
+                dataKey="cpu_usage"
+                stroke="#3b82f6"
                 strokeWidth={2}
                 name="CPU %"
                 dot={{ fill: '#3b82f6', r: 4 }}
               />
-              <Line 
-                type="monotone" 
-                dataKey="memory" 
-                stroke="#64748b" 
+              <Line
+                type="monotone"
+                dataKey="memory_usage"
+                stroke="#64748b"
                 strokeWidth={2}
                 name="Memory %"
                 dot={{ fill: '#64748b', r: 4 }}
@@ -246,27 +213,27 @@ export default function PerformanceMonitoring() {
             API Response Time by Endpoint
           </h2>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={apiResponseData}>
+            <BarChart data={responseTimeByEndpoint}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis 
-                dataKey="day" 
+              <XAxis
+                dataKey="endpoint"
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: '#e2e8f0' }}
               />
-              <YAxis 
+              <YAxis
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: '#e2e8f0' }}
               />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#fff', 
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#fff',
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px'
                 }}
               />
-              <Bar 
-                dataKey="time" 
-                fill="url(#colorGradient)" 
+              <Bar
+                dataKey="avg_time"
+                fill="url(#colorGradient)"
                 radius={[8, 8, 0, 0]}
               />
               <defs>
@@ -286,26 +253,26 @@ export default function PerformanceMonitoring() {
             <h2 className="text-lg font-semibold text-slate-900">Error Logs</h2>
           </div>
           <div className="space-y-3">
-            {errorLogs.map((log) => (
+            {errorsData?.map((log) => (
               <div
                 key={log.id}
-                className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                className="flex items-center justify-between p-4 bg-[#FFF8E7] rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1">
                   <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-red-600 text-sm">{log.type}:</span>
-                      <span className="text-slate-900 font-semibold">{log.message}</span>
+                      <span className="font-medium text-red-600 text-sm">{log.message}:</span>
+                      <span className="text-slate-900 font-semibold">{log.path}</span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-600">
-                      <span>{log.time}</span>
+                      <span>{log.time_ago}</span>
                       <span>•</span>
-                      <span>{log.views}</span>
+                      <span>{log.count}  occurrence</span>
                     </div>
                   </div>
                 </div>
-                {getSeverityBadge(log.severity)}
+                {getSeverityBadge(log.level)}
               </div>
             ))}
           </div>
@@ -317,38 +284,38 @@ export default function PerformanceMonitoring() {
             User Engagement Metrics
           </h2>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={userEngagementData}>
+            <AreaChart data={ChartEngagement}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis 
-                dataKey="month" 
+              <XAxis
+                dataKey="date"
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: '#e2e8f0' }}
               />
-              <YAxis 
+              <YAxis
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: '#e2e8f0' }}
               />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#fff', 
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#fff',
                   border: '1px solid #e2e8f0',
                   borderRadius: '8px'
                 }}
               />
               <Legend wrapperStyle={{ fontSize: '14px' }} />
-              <Area 
-                type="monotone" 
-                dataKey="pageViews" 
-                stroke="#3b82f6" 
+              <Area
+                type="monotone"
+                dataKey="active_users"
+                stroke="#3b82f6"
                 fill="#3b82f6"
                 fillOpacity={0.3}
                 name="Page Sessions (user)"
                 strokeWidth={2}
               />
-              <Area 
-                type="monotone" 
-                dataKey="activeUsers" 
-                stroke="#10b981" 
+              <Area
+                type="monotone"
+                dataKey="avg_session_min"
+                stroke="#10b981"
                 fill="#10b981"
                 fillOpacity={0.3}
                 name="Daily Active Users"

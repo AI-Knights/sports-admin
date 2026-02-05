@@ -14,18 +14,28 @@ import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { use, useState } from 'react';
 import icon from "@/public/fotboll.png"
 import { useRouter } from 'next/navigation';
+import { useLoginAdminMutation } from '@/store/api/auth/auth';
 
 export default function SignInPage() {
   const form = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     defaultValues: { email: '', password: '', rememberMe: false },
   });
-  const [showPassword, setShowPassword] = useState(false); // Toggle state
+  const [loginAdmin] = useLoginAdminMutation()
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter()
-  const onSubmit = (data: SignInFormData) => {
-    console.log('Validated sign-in:', data);
-    router.push('/');
+  const onSubmit = async (data: SignInFormData) => {
+    try {
+      const response = await loginAdmin({ email: data.email, password: data.password }).unwrap();
+      console.log(response)
+      localStorage.setItem("email", data.email);
+
+      router.push("/verify-otp");
+    } catch (err) {
+      console.error(err);
+    }
   };
+
 
   return (
     <div className="min-h-screen flex flex-col bg-white">

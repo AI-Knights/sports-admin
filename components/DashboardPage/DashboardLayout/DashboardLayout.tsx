@@ -13,7 +13,7 @@ type Props = {
 export default function DashboardLayout({ children }: Props) {
     const [sidebarIcon, setSideBar] = useState<boolean>(false)
     const pathname = usePathname();
-    const isLoginRoute = pathname === "/sign-in";
+    const isLoginRoute = pathname === "/sign-in" || pathname === "/verify-otp";
     console.log({path : pathname , isLoginRoute})
     return (
         <div className={cn('h-screen md:grid grid-cols-12 relative overflow-x-hidden gap-4 ')}>
