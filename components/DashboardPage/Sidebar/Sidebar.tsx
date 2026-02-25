@@ -51,7 +51,7 @@ export default function Sidebar({ variant = "desktop" }: SidebarProps) {
 
         {/* Admin Info */}
 
-        
+
         <div className="flex items-center rounded-md pl-2 bg-gray-800 py-2 my-8 space-x-2">
           <Avatar className="h-8 bg-yellow-950 w-8">
             <AvatarFallback className="bg-transparent">JA</AvatarFallback>
@@ -76,7 +76,7 @@ export default function Sidebar({ variant = "desktop" }: SidebarProps) {
               </Link>
             </Button>
 
-            <Button
+            {/* <Button
               asChild
               variant="ghost"
               className={`w-full justify-start ${activeClass("/news")}`}
@@ -85,18 +85,9 @@ export default function Sidebar({ variant = "desktop" }: SidebarProps) {
                 <Newspaper className="mr-2 h-4 w-4" />
                 News Management
               </Link>
-            </Button>
+            </Button> */}
 
-            <Button
-              asChild
-              variant="ghost"
-              className={`w-full justify-start ${activeClass("/notifications")}`}
-            >
-              <Link href="/notifications">
-                <Bell className="mr-2 h-4 w-4" />
-                Notifications
-              </Link>
-            </Button>
+
 
             <Button
               asChild
@@ -117,6 +108,16 @@ export default function Sidebar({ variant = "desktop" }: SidebarProps) {
               <Link href="/performance">
                 <TrendingUp className="mr-2 h-4 w-4" />
                 Performance
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              className={`w-full justify-start ${activeClass("/notifications")}`}
+            >
+              <Link href="/notifications">
+                <Bell className="mr-2 h-4 w-4" />
+                Notifications
               </Link>
             </Button>
           </div>

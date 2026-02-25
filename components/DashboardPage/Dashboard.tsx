@@ -3,10 +3,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts'; // Assume installed: npm install recharts
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, BarChart, Bar } from 'recharts'; // Assume installed: npm install recharts
 import { motion } from 'framer-motion'; // Assume animation library is framer-motion, installed: npm install framer-motion
 import { Bell, FileText, Users, TrendingUp, LogOut, Settings, User, Newspaper, BarChart2 } from 'lucide-react'; // Icons from lucide-react, assume installed
 import Header from '../ShardComponents/Header/Header';
+import { useGetDashboardStatsQuery, useGetEngagementHistoryQuery } from '@/store/api/monitoring/monitoring';
 
 // Sample data for chart
 const performanceData = [
@@ -29,6 +30,10 @@ const recentActivities = [
 ];
 
 export default function Dashboard() {
+  const { data, isLoading: usersLoading } = useGetDashboardStatsQuery();
+  console.log(data);
+  const { data: engagementData } = useGetEngagementHistoryQuery()
+  console.log(engagementData)
   return (
     <div className="flex  min-h-screen text-foreground">
 
@@ -51,7 +56,7 @@ export default function Dashboard() {
 
               <CardContent className='px-0 space-x-4' >
                 <CardTitle className="text-xl text-gray-500 px-0">Total Users</CardTitle>
-                <div className="text-2xl text-orange-300">156,847</div>
+                <div className="text-2xl text-orange-300">{data ? data?.totals?.guest_devices + data?.totals?.registered_users : 0}</div>
               </CardContent>
               <Users size={40} className=" text-orange-500 bg-[#FFF8E7] p-2 rounded-xl" />
             </Card>
@@ -60,8 +65,8 @@ export default function Dashboard() {
             <Card className='flex flex-row justify-between px-8 items-center' >
 
               <CardContent className='px-0 space-x-4' >
-                <CardTitle className="text-xl text-gray-500 px-0">Total News Articles</CardTitle>
-                <div className="text-2xl text-orange-300">2,543</div>
+                <CardTitle className="text-xl text-gray-500 px-0">Registered Users</CardTitle>
+                <div className="text-2xl text-orange-300">{data ? data?.totals?.registered_users : 0}</div>
               </CardContent>
               <FileText size={40} className=" text-orange-500 bg-[#FFF8E7] p-2 rounded-xl" />
             </Card>
@@ -71,23 +76,23 @@ export default function Dashboard() {
             <Card className='flex flex-row justify-between px-8 items-center' >
 
               <CardContent className='px-0 space-x-4' >
-                <CardTitle className="text-xl text-gray-500 px-0">Active Notifications</CardTitle>
-                <div className="text-2xl text-orange-300">26</div>
+                <CardTitle className="text-xl text-gray-500 px-0">Guest Users</CardTitle>
+                <div className="text-2xl text-orange-300">{data ? data?.totals?.guest_devices : 0}</div>
               </CardContent>
               <Bell size={40} className=" text-orange-500 bg-[#FFF8E7] p-2 rounded-xl" />
             </Card>
-        
+
           </motion.div>
           <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ duration: 0.8, delay: 0.3 }}>
-             <Card className='flex flex-row justify-between px-8 items-center' >
+            <Card className='flex flex-row justify-between px-8 items-center' >
 
               <CardContent className='px-0 space-x-4' >
-                <CardTitle className="text-xl text-gray-500 px-0">Performance Score</CardTitle>
-                <div className="text-2xl text-orange-300">98.5%</div>
+                <CardTitle className="text-xl text-gray-500 px-0">Avg API Latency</CardTitle>
+                <div className="text-2xl text-orange-300">{data ? data?.performance_1h.avg_api_latency_ms : 0}</div>
               </CardContent>
               <TrendingUp size={40} className=" text-orange-500 bg-[#FFF8E7] p-2 rounded-xl" />
             </Card>
-         
+
           </motion.div>
         </div>
 
@@ -130,41 +135,51 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Performance Chart */}
+        {/* Engagement History Bar Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>System Load / Performance Over Time</CardTitle>
+            <CardTitle>User Engagement History</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={performanceData}>
-                {/* ✅ Gradient */}
-                <defs>
-                  <linearGradient id="loadGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f97316" stopOpacity={0.6} />
-                    <stop offset="100%" stopColor="#f97316" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-
-                {/* ✅ Gradient area */}
-                <Area
-                  type="monotone"
-                  dataKey="load"
-                  stroke="#f97316"
-                  fill="url(#loadGradient)"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 5 }}
+              <BarChart data={engagementData || []}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
                 />
-              </AreaChart>
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                />
+                <Tooltip
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                />
+                <Legend iconType="circle" />
+                <Bar
+                  dataKey="daily_active_users"
+                  name="Daily Active Users"
+                  fill="#f97316"
+                  radius={[4, 4, 0, 0]}
+                  barSize={40}
+                />
+                <Bar
+                  dataKey="avg_session_min"
+                  name="Avg Session (min)"
+                  fill="#fbbf24"
+                  radius={[4, 4, 0, 0]}
+                  barSize={40}
+                />
+              </BarChart>
             </ResponsiveContainer>
-
           </CardContent>
         </Card>
 

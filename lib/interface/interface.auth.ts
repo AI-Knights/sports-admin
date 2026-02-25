@@ -1,11 +1,11 @@
 export type LoginAdminRequest = {
-    email: string;
-    password: string;
+  email: string;
+  password: string;
 };
 
 export type LoginAdminResponse = {
-    message: string;
-    email: string;
+  message: string;
+  email: string;
 };
 
 
@@ -27,3 +27,26 @@ export interface VerifyOtpResponse {
   };
 }
 
+
+export interface ProfileData {
+  can_manage_news: boolean;
+  can_manage_users: boolean;
+}
+
+export interface AdminProfile {
+  id: string;
+  email: string;
+  role: string;
+  first_name: string;
+  last_name: string;
+  profile_image: string | null;
+  date_joined: string;
+  last_login: string;
+  profile_data: ProfileData;
+}
+
+export interface UpdateProfileRequest {
+  first_name: string;
+  last_name: string;
+  profile_image?: File | null;
+}

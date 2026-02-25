@@ -1,382 +1,290 @@
 "use client"
 
-import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Calendar, Edit3, Check, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, Mail, User, Calendar, Shield, Save, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useGetProfileQuery, useUpdateProfileMutation } from '@/store/api/auth/auth';
+import { toast } from '@/components/ui/toast';
 
-interface AdminProfile {
-  fullName: string;
-  email: string;
-  phone: string;
-  location: string;
-  bio: string;
-  joinedDate: string;
-  role: string;
-  avatar?: string; // ✅ add this
-  stats: {
-    newsPublished: string;
-    notificationsSent: string;
-    usersManaged: string;
-    systemUptime: string;
-  };
-  recentActivity: Activity[];
-}
+export default function ProfilePage() {
+  const { data: profile, isLoading, refetch } = useGetProfileQuery();
+  const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
 
-
-interface Activity {
-  id: number;
-  description: string;
-  time: string;
-}
-
-const initialProfile: AdminProfile = {
-  fullName: 'John Anderson',
-  email: 'john.anderson@footballadmin.com',
-  phone: '+1 (555) 123-4567',
-  location: 'London, United Kingdom',
-  bio: 'Experienced football administrator with 10+ years in sports management. Passionate about bringing the best football content to fans worldwide.',
-  joinedDate: 'January 15, 2024',
-  role: 'Super Admin',
-  stats: {
-    newsPublished: '1,247',
-    notificationsSent: '3,892',
-    usersManaged: '156K',
-    systemUptime: '99.8%'
-  },
-  recentActivity: [
-    { id: 1, description: 'Published article: Liverpool vs Arsenal Match Recap', time: '2 hours ago' },
-    { id: 2, description: 'Sent goal notification to 45,000 users', time: '5 hours ago' },
-    { id: 3, description: 'Updated user permissions', time: '1 day ago' },
-    { id: 4, description: 'Reviewed and approved 12 news articles', time: '2 days ago' },
-    { id: 5, description: 'System maintenance completed', time: '3 days ago' }
-  ]
-};
-
-export default function AdminProfileSettings() {
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState<AdminProfile>(initialProfile);
-  const [editedProfile, setEditedProfile] = useState<AdminProfile>(initialProfile);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: '',
+    bio: ''
+  });
 
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  // Selected image file for upload
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  // Preview URL for the selected image
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || '',
+        email: profile.email || '',
+        role: profile.role || '',
+        bio: 'Administrator' // Placeholder as bio isn't in API yet
+      });
+      // Set initial image from profile if available
+      if (profile.profile_image) {
+        setImagePreview(profile.profile_image);
+      }
+    }
+  }, [profile]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleImageClick = () => {
-    fileInputRef.current?.click();
+    if (isEditing) {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setEditedProfile(prev => ({
-        ...prev,
-        avatar: reader.result as string,
-      }));
-    };
-    reader.readAsDataURL(file);
+    if (file) {
+      setSelectedImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
+  const handleSave = async () => {
+    try {
+      const submitData = new FormData();
+      submitData.append('first_name', formData.firstName);
+      submitData.append('last_name', formData.lastName);
 
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditedProfile(profile);
+      if (selectedImageFile) {
+        submitData.append('profile_image', selectedImageFile);
+      }
+
+      await updateProfile(submitData).unwrap();
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+        variant: "success",
+      });
+      setIsEditing(false);
+      refetch();
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    setEditedProfile(profile);
+    // Reset form data to current profile values
+    if (profile) {
+      setFormData({
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || '',
+        email: profile.email || '',
+        role: profile.role || '',
+        bio: 'Administrator'
+      });
+      setSelectedImageFile(null);
+      setImagePreview(profile.profile_image);
+    }
   };
 
-  const handleSave = () => {
-    setProfile(editedProfile);
-    setIsEditing(false);
-  };
-
-  const handleInputChange = (field: keyof AdminProfile, value: string) => {
-    setEditedProfile(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase();
-  };
-
-  if (isEditing) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        {/* Header */}
-        <header className="bg-white border-b border-slate-200">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-slate-900">Admin Profile</h1>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                className="border-slate-300"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                className="bg-orange-500 hover:bg-orange-600"
-              >
-                <Check className="w-4 h-4 mr-2" />
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <div className="p-6 max-w-5xl mx-auto">
-          {/* Profile Edit Section */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-            <div className="flex items-start gap-6 mb-6">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full bg-orange-500 flex items-center justify-center text-white text-3xl font-bold">
-                  {editedProfile.avatar ? (
-                    <img
-                      src={editedProfile.avatar}
-                      alt="avatar"
-                      className="w-full rounded-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-white text-3xl font-bold">
-                      {getInitials(editedProfile.fullName)}
-                    </span>
-                  )}
-                </div>
-                <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white hover:bg-orange-600 transition-colors">
-                  <Edit3 className="w-4 h-4" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={handleImageChange}
-                    className="opacity-0 absolute bottom-0 right-0 cursor-pointer"
-                  />
-
-                </button>
-              </div>
-              <div className="flex-1">
-                <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white mb-2">
-                  {profile.role}
-                </Badge>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="fullName" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                  Full Name
-                </Label>
-                <Input
-                  id="fullName"
-                  value={editedProfile.fullName}
-                  onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  className="bg-slate-50 border-slate-200"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="email" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={editedProfile.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="bg-slate-50 border-slate-200"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="phone" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                  Phone
-                </Label>
-                <Input
-                  id="phone"
-                  value={editedProfile.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className="bg-slate-50 border-slate-200"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="location" className="text-sm font-medium text-slate-700 mb-1.5 block">
-                  Location
-                </Label>
-                <Input
-                  id="location"
-                  value={editedProfile.location}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
-                  className="bg-slate-50 border-slate-200"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-              <p className="text-sm text-slate-600 mb-1">News Published</p>
-              <p className="text-xl font-bold text-orange-500">{profile.stats.newsPublished}</p>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-              <p className="text-sm text-slate-600 mb-1">Notifications Sent</p>
-              <p className="text-xl font-bold text-orange-500">{profile.stats.notificationsSent}</p>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-              <p className="text-sm text-slate-600 mb-1">Users Managed</p>
-              <p className="text-xl font-bold text-orange-500">{profile.stats.usersManaged}</p>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-              <p className="text-sm text-slate-600 mb-1">System Uptime</p>
-              <p className="text-xl font-bold text-teal-500">{profile.stats.systemUptime}</p>
-            </div>
-          </div>
-
-          {/* About Me */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-            <h3 className="text-base font-semibold text-slate-900 mb-3">About Me</h3>
-            <Textarea
-              value={editedProfile.bio}
-              onChange={(e) => handleInputChange('bio', e.target.value)}
-              placeholder="Tell us about yourself..."
-              rows={5}
-              className="bg-slate-50 border-slate-200 resize-none"
-            />
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">Recent Activity</h3>
-            <div className="space-y-3">
-              {profile.recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
-                  <div className="flex-1">
-                    <p className="text-slate-900">{activity.description}</p>
-                    <p className="text-sm text-slate-500">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
       </div>
     );
+  }
+
+  if (!profile) {
+    return <div className="p-6">Error loading profile.</div>;
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="px-6 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-slate-900">Admin Profile</h1>
-          <Button
-            onClick={handleEdit}
-            className="bg-orange-500 hover:bg-orange-600"
-          >
-            <Edit3 className="w-4 h-4 mr-2" />
-            Edit Profile
-          </Button>
+          <h1 className="text-2xl font-bold text-orange-500">My Profile</h1>
+          {!isEditing ? (
+            <Button
+              onClick={() => setIsEditing(true)}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              Edit Profile
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isUpdating}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isUpdating}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isUpdating ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save Changes
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 
-      <div className="p-6 max-w-5xl mx-auto">
-        {/* Profile Display Section */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-          <div className="flex items-start gap-6">
-            <div>
-              <div className="w-24 h-24 rounded-full bg-orange-500 flex items-center justify-center text-white text-3xl font-bold mb-2">
-                {editedProfile.avatar ? (
-                  <img
-                    src={editedProfile.avatar}
-                    alt="avatar"
-                    className="w-full h-full rounded-full object-cover"
+      <div className="p-6 mx-auto space-y-6">
+        {/* Profile Card */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          <div className="p-6 md:p-8">
+            <div className="flex flex-col md:flex-row gap-8 items-start">
+              {/* Avatar Section */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative group">
+                  <div
+                    className={`w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-inner ${isEditing ? 'cursor-pointer' : ''}`}
+                    onClick={handleImageClick}
+                  >
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+                        <User className="w-12 h-12" />
+                      </div>
+                    )}
+
+                    {isEditing && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Camera className="w-8 h-8 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    className="hidden"
+                    accept="image/*"
                   />
-                ) : (
-                  <span className="text-white text-3xl font-bold">
-                    {getInitials(editedProfile.fullName)}
-                  </span>
-                )}
+                </div>
+                <div className="text-center">
+                  <h2 className="text-xl font-bold text-slate-900">{profile.first_name} {profile.last_name}</h2>
+                  <p className="text-slate-500">{profile.role}</p>
+                </div>
+                <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 px-3 py-1">
+                  Active Status
+                </Badge>
               </div>
-              <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">
-                {profile.role}
-              </Badge>
+
+              {/* Details Section */}
+              <div className="flex-1 w-full space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-slate-500">First Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-slate-500">Last Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-slate-500">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        name="email"
+                        value={formData.email}
+                        disabled={true} // Email usually not editable directly
+                        className="pl-9 bg-slate-50"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-slate-500">Role</Label>
+                    <div className="relative">
+                      <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        value={formData.role}
+                        disabled={true}
+                        className="pl-9 bg-slate-50"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-slate-500">Date Joined</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        value={new Date(profile.date_joined).toLocaleDateString()}
+                        disabled={true}
+                        className="pl-9 bg-slate-50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">{profile.fullName}</h2>
-              <p className="text-slate-600 mb-4">{profile.bio}</p>
-
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Mail className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm">{profile.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Phone className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm">{profile.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700">
-                  <MapPin className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm">{profile.location}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Calendar className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm">Joined {profile.joinedDate}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-5 text-center hover:shadow-md transition-shadow">
-            <p className="text-sm text-slate-600 mb-2">News Published</p>
-            <p className="text-2xl font-bold text-orange-500">{profile.stats.newsPublished}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-5 text-center hover:shadow-md transition-shadow">
-            <p className="text-sm text-slate-600 mb-2">Notifications Sent</p>
-            <p className="text-2xl font-bold text-orange-500">{profile.stats.notificationsSent}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-5 text-center hover:shadow-md transition-shadow">
-            <p className="text-sm text-slate-600 mb-2">Users Managed</p>
-            <p className="text-2xl font-bold text-orange-500">{profile.stats.usersManaged}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-5 text-center hover:shadow-md transition-shadow">
-            <p className="text-sm text-slate-600 mb-2">System Uptime</p>
-            <p className="text-2xl font-bold text-teal-500">{profile.stats.systemUptime}</p>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent Activity</h3>
-          <div className="space-y-4">
-            {profile.recentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
-                <div className="flex-1">
-                  <p className="text-slate-900 font-medium">{activity.description}</p>
-                  <p className="text-sm text-slate-500">{activity.time}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>

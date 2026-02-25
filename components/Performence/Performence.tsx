@@ -1,29 +1,12 @@
 "use client"
 
-import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, Users, Activity, AlertTriangle, Clock } from 'lucide-react';
+import React from 'react';
+import { TrendingUp, Users, Activity, AlertTriangle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { useChartEngagementQuery, useErrorsDataQuery, useGetMonitoringDataQuery, useResoursUseQuery, useSummaryDataQuery } from '@/store/api/monitoring/monitoring';
+import { useGetDashboardStatsQuery, useGetEngagementHistoryQuery } from '@/store/api/monitoring/monitoring';
 import Card from './Card';
-
-// Types
-interface MetricCard {
-  title: string;
-  value: string;
-  change: string;
-  trend: 'up' | 'down';
-  icon: React.ReactNode;
-}
-
-interface ErrorLog {
-  id: number;
-  type: string;
-  message: string;
-  time: string;
-  views: string;
-  severity: 'high' | 'medium' | 'low';
-}
+import { MetricCard } from '@/lib/interface/interface.monitoring'; // Assuming Card expects summaryData directly or adapted
 
 interface NewsArticle {
   id: number;
@@ -31,54 +14,6 @@ interface NewsArticle {
   date: string;
   views: string;
 }
-
-
-
-
-
-
-const errorLogs: ErrorLog[] = [
-  {
-    id: 1,
-    type: 'API Request',
-    message: 'UploadMediaFiles',
-    time: '15 min ago',
-    views: '8 occurrences',
-    severity: 'high'
-  },
-  {
-    id: 2,
-    type: 'Database Connection',
-    message: 'Port Enhanced',
-    time: '28 min ago',
-    views: '3 occurrences',
-    severity: 'high'
-  },
-  {
-    id: 3,
-    type: '404 Not Found',
-    message: 'sportsvideopage',
-    time: '35 min ago',
-    views: '12 occurrences',
-    severity: 'medium'
-  },
-  {
-    id: 4,
-    type: 'Rate Limit Exceeded',
-    message: 'User 12345',
-    time: '2 hour ago',
-    views: '6 occurrences',
-    severity: 'medium'
-  },
-  {
-    id: 5,
-    type: 'Image Upload Failed',
-    message: 'Size Limit',
-    time: '3 hour ago',
-    views: '4 occurrences',
-    severity: 'low'
-  }
-];
 
 const newsArticles: NewsArticle[] = [
   { id: 1, title: 'Liverpool Stuns Victory Against Arsenal', date: '25.12.2025', views: 'views' },
@@ -89,49 +24,11 @@ const newsArticles: NewsArticle[] = [
 ];
 
 export default function PerformanceMonitoring() {
-  const { data: responseTimeByEndpoint } = useGetMonitoringDataQuery()
-  // console.log(responseTimeByEndpoint)
-  const { data: ChartEngagement } = useChartEngagementQuery()
-
-  const { data: resoursUse } = useResoursUseQuery()
-
-  const { data: errorsData } = useErrorsDataQuery()
-
-  const { data: summaryData } = useSummaryDataQuery()
-  // console.log(resoursUse)
-  const metricCards: MetricCard[] = [
-    {
-      title: 'Server Load',
-      value: '75%',
-      change: '+5%',
-      trend: 'up',
-      icon: <Activity className="w-5 h-5 text-orange-600" />
-    },
-    {
-      title: 'API Response Time',
-      value: '320ms',
-      change: '-15%',
-      trend: 'down',
-      icon: <Clock className="w-5 h-5 text-orange-600" />
-    },
-    {
-      title: 'Live User Count',
-      value: '12,847',
-      change: '+12%',
-      trend: 'up',
-      icon: <Users className="w-5 h-5 text-orange-600" />
-    },
-    {
-      title: 'Cache Hit Rate',
-      value: '94.2%',
-      change: '+2%',
-      trend: 'up',
-      icon: <TrendingUp className="w-5 h-5 text-orange-600" />
-    }
-  ];
+  const { data: dashboardStats } = useGetDashboardStatsQuery();
+  const { data: engagementHistory } = useGetEngagementHistoryQuery();
 
   const getSeverityBadge = (severity: string) => {
-    switch (severity) {
+    switch (severity.toLowerCase()) {
       case 'high':
         return <Badge className="bg-red-500 hover:bg-red-600 text-white">High</Badge>;
       case 'medium':
@@ -153,76 +50,82 @@ export default function PerformanceMonitoring() {
       </header>
 
       <div className="p-6  mx-auto space-y-6">
-        {/* Metric Cards */}
-       
+        {/* Metric Cards - Adapted from dashboardStats.real_time and dashboardStats.totals */}
+        {dashboardStats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Total Active</p>
+                <h3 className="text-2xl font-bold text-slate-900">{dashboardStats.real_time.total_active}</h3>
+              </div>
+              <Users className="w-8 h-8 text-orange-500 opacity-20" />
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Avg API Latency</p>
+                <h3 className="text-2xl font-bold text-slate-900">{dashboardStats.performance_1h.avg_api_latency_ms.toFixed(0)} ms</h3>
+              </div>
+              <Clock className="w-8 h-8 text-orange-500 opacity-20" />
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Cache Hit Rate</p>
+                <h3 className="text-2xl font-bold text-slate-900">{dashboardStats.performance_1h.cache_hit_rate}%</h3>
+              </div>
+              <TrendingUp className="w-8 h-8 text-orange-500 opacity-20" />
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Active Guests</p>
+                <h3 className="text-2xl font-bold text-slate-900">{dashboardStats.real_time.active_guests}</h3>
+              </div>
+              <Activity className="w-8 h-8 text-orange-500 opacity-20" />
+            </div>
+          </div>
+        )}
 
-        <Card metrics={summaryData} />
-
-    
-
-        {/* Server Load & Resource Usage Chart */}
+        {/* Server Load & Resource Usage Chart - Static or from another source if available in stats */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">
-            Server Load & Resource Usage
+            System Performance (1h Avg)
           </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={resoursUse}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis
-                dataKey="time"
-                tick={{ fill: '#64748b', fontSize: 12 }}
-                axisLine={{ stroke: '#e2e8f0' }}
-              />
-              <YAxis
-                tick={{ fill: '#64748b', fontSize: 12 }}
-                axisLine={{ stroke: '#e2e8f0' }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px'
-                }}
-              />
-              <Legend
-                wrapperStyle={{ fontSize: '14px' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="cpu_usage"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                name="CPU %"
-                dot={{ fill: '#3b82f6', r: 4 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="memory_usage"
-                stroke="#64748b"
-                strokeWidth={2}
-                name="Memory %"
-                dot={{ fill: '#64748b', r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <p className="text-slate-500 mb-2">CPU Load</p>
+              <div className="text-3xl font-bold text-blue-600">{dashboardStats?.performance_1h.cpu_load_percent}%</div>
+            </div>
+            <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <p className="text-slate-500 mb-2">RAM Usage</p>
+              <div className="text-3xl font-bold text-purple-600">{dashboardStats?.performance_1h.ram_usage_percent}%</div>
+            </div>
+            <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <p className="text-slate-500 mb-2">Cache Hit Rate</p>
+              <div className="text-3xl font-bold text-green-600">{dashboardStats?.performance_1h.cache_hit_rate}%</div>
+            </div>
+          </div>
         </div>
 
         {/* API Response Time Chart */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">
-            API Response Time by Endpoint
+            API Response Time by Endpoint (Top Endpoints)
           </h2>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={responseTimeByEndpoint}>
+            <BarChart data={dashboardStats?.endpoints || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis
                 dataKey="endpoint"
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: '#e2e8f0' }}
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={70}
               />
               <YAxis
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 axisLine={{ stroke: '#e2e8f0' }}
+                label={{ value: 'ms', angle: -90, position: 'insideLeft' }}
               />
               <Tooltip
                 contentStyle={{
@@ -235,6 +138,7 @@ export default function PerformanceMonitoring() {
                 dataKey="avg_time"
                 fill="url(#colorGradient)"
                 radius={[8, 8, 0, 0]}
+                name="Avg Time (ms)"
               />
               <defs>
                 <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
@@ -250,41 +154,42 @@ export default function PerformanceMonitoring() {
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-5 h-5 text-orange-500" />
-            <h2 className="text-lg font-semibold text-slate-900">Error Logs</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Recent Error Logs</h2>
           </div>
           <div className="space-y-3">
-            {errorsData?.map((log) => (
+            {dashboardStats?.errors?.map((log, index) => (
               <div
-                key={log.id}
+                key={index}
                 className="flex items-center justify-between p-4 bg-[#FFF8E7] rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1">
                   <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-red-600 text-sm">{log.message}:</span>
-                      <span className="text-slate-900 font-semibold">{log.path}</span>
+                      <span className="font-medium text-red-600 text-sm">{log.message}</span>
+                      <span className="text-slate-900 font-semibold text-xs bg-slate-200 px-2 py-0.5 rounded">{log.path}</span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-600">
-                      <span>{log.time_ago}</span>
-                      <span>•</span>
-                      <span>{log.count}  occurrence</span>
+                      <span>{log.count} occurrences</span>
                     </div>
                   </div>
                 </div>
                 {getSeverityBadge(log.level)}
               </div>
             ))}
+            {!dashboardStats?.errors?.length && (
+              <div className="text-center py-6 text-slate-500">No recent errors reported.</div>
+            )}
           </div>
         </div>
 
         {/* User Engagement Metrics Chart */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">
-            User Engagement Metrics
+            User Engagement Metrics (7 Days)
           </h2>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={ChartEngagement}>
+            <AreaChart data={engagementHistory || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis
                 dataKey="date"
@@ -305,11 +210,11 @@ export default function PerformanceMonitoring() {
               <Legend wrapperStyle={{ fontSize: '14px' }} />
               <Area
                 type="monotone"
-                dataKey="active_users"
+                dataKey="daily_active_users"
                 stroke="#3b82f6"
                 fill="#3b82f6"
                 fillOpacity={0.3}
-                name="Page Sessions (user)"
+                name="Daily Active Users"
                 strokeWidth={2}
               />
               <Area
@@ -318,14 +223,14 @@ export default function PerformanceMonitoring() {
                 stroke="#10b981"
                 fill="#10b981"
                 fillOpacity={0.3}
-                name="Daily Active Users"
+                name="Avg Session (min)"
                 strokeWidth={2}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Most Viewed News Articles */}
+        {/* Most Viewed News Articles - Keeping static for now as strictly requested monitoring updates */}
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">
             Most Viewed News Articles
