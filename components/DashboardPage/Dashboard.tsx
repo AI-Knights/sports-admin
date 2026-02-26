@@ -3,11 +3,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, BarChart, Bar } from 'recharts'; // Assume installed: npm install recharts
-import { motion } from 'framer-motion'; // Assume animation library is framer-motion, installed: npm install framer-motion
-import { Bell, FileText, Users, TrendingUp, LogOut, Settings, User, Newspaper, BarChart2 } from 'lucide-react'; // Icons from lucide-react, assume installed
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, Area, AreaChart } from 'recharts';
+import { motion } from 'framer-motion';
+import { Bell, FileText, Users, TrendingUp, LogOut, Settings, User, Newspaper, BarChart2 } from 'lucide-react';
 import Header from '../ShardComponents/Header/Header';
-import { useGetDashboardStatsQuery, useGetEngagementHistoryQuery } from '@/store/api/monitoring/monitoring';
+import { useGetDashboardStatsQuery, useGetEngagementHistoryQuery, useGetServerHistoryQuery } from '@/store/api/monitoring/monitoring';
 
 // Sample data for chart
 const performanceData = [
@@ -19,6 +19,7 @@ const performanceData = [
   { time: '20:00', load: 40 },
   { time: '23:59', load: 30 },
 ];
+
 
 // Sample recent activities data
 const recentActivities = [
@@ -32,8 +33,13 @@ const recentActivities = [
 export default function Dashboard() {
   const { data, isLoading: usersLoading } = useGetDashboardStatsQuery();
   console.log(data);
-  const { data: engagementData } = useGetEngagementHistoryQuery()
-  console.log(engagementData)
+  const { data: serverHistory } = useGetServerHistoryQuery()
+
+  const formattedServerHistory = serverHistory?.map((item: any) => ({
+    ...item,
+    time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }));
+
   return (
     <div className="flex  min-h-screen text-foreground">
 
@@ -135,48 +141,50 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Engagement History Bar Chart */}
+        {/* Server Load Bar Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>User Engagement History</CardTitle>
+            <CardTitle>Server Load Monitor (CPU & RAM)</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={engagementData || []}>
+              <BarChart data={formattedServerHistory || []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis
-                  dataKey="date"
+                  dataKey="time"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tick={{ fill: '#64748b', fontSize: 10 }}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: '#64748b', fontSize: 12 }}
+                  unit="%"
                 />
                 <Tooltip
                   cursor={{ fill: '#f8fafc' }}
                   contentStyle={{
-                    borderRadius: '8px',
+                    backgroundColor: '#fff',
                     border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                   }}
                 />
-                <Legend iconType="circle" />
+                <Legend verticalAlign="top" height={36} />
                 <Bar
-                  dataKey="daily_active_users"
-                  name="Daily Active Users"
+                  dataKey="cpu_usage"
+                  name="CPU Usage"
                   fill="#f97316"
                   radius={[4, 4, 0, 0]}
-                  barSize={40}
+                  barSize={20}
                 />
                 <Bar
-                  dataKey="avg_session_min"
-                  name="Avg Session (min)"
-                  fill="#fbbf24"
+                  dataKey="ram_usage"
+                  name="RAM Usage"
+                  fill="#3b82f6"
                   radius={[4, 4, 0, 0]}
-                  barSize={40}
+                  barSize={20}
                 />
               </BarChart>
             </ResponsiveContainer>

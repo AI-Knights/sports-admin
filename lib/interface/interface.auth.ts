@@ -50,3 +50,27 @@ export interface UpdateProfileRequest {
   last_name: string;
   profile_image?: File | null;
 }
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordResetVerifyOtpRequest {
+  email: string;
+  otp: string;
+}
+
+export interface PasswordResetConfirmRequest {
+  email: string;
+  otp: string;
+  password: string;
+  confirm_password: string;
+}
+
+export interface ChangePasswordRequest {
+  old_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+

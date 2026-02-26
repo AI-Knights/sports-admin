@@ -1,4 +1,4 @@
-import { LoginAdminRequest, LoginAdminResponse, VerifyOtpRequest, VerifyOtpResponse, AdminProfile } from "@/lib/interface/interface.auth";
+import { LoginAdminRequest, LoginAdminResponse, VerifyOtpRequest, VerifyOtpResponse, AdminProfile, PasswordResetRequest, PasswordResetVerifyOtpRequest, PasswordResetConfirmRequest, ChangePasswordRequest } from "@/lib/interface/interface.auth";
 import { api } from "../baseApi";
 
 export const authApi = api.injectEndpoints({
@@ -24,6 +24,34 @@ export const authApi = api.injectEndpoints({
                 body: data,
             }),
         }),
+        passwordResetRequest: builder.mutation<{ message: string }, PasswordResetRequest>({
+            query: (data) => ({
+                url: "/auth/password-reset-request/",
+                method: "POST",
+                body: data,
+            }),
+        }),
+        passwordResetVerifyOtp: builder.mutation<{ message: string }, PasswordResetVerifyOtpRequest>({
+            query: (data) => ({
+                url: "/auth/password-reset-verify-otp/",
+                method: "POST",
+                body: data,
+            }),
+        }),
+        passwordResetConfirm: builder.mutation<{ message: string }, PasswordResetConfirmRequest>({
+            query: (data) => ({
+                url: "/auth/password-reset-confirm/",
+                method: "POST",
+                body: data,
+            }),
+        }),
+        changePassword: builder.mutation<{ message: string }, ChangePasswordRequest>({
+            query: (data) => ({
+                url: "/auth/profile/change-password/",
+                method: "POST",
+                body: data,
+            }),
+        }),
         getProfile: builder.query<AdminProfile, void>({
             query: () => "/auth/profile/",
             providesTags: ["Users"], // Using Users tag effectively creates a dependency on auth state
@@ -45,4 +73,8 @@ export const {
     useVerifyOtpMutation,
     useGetProfileQuery,
     useUpdateProfileMutation,
+    usePasswordResetRequestMutation,
+    usePasswordResetVerifyOtpMutation,
+    usePasswordResetConfirmMutation,
+    useChangePasswordMutation,
 } = authApi;

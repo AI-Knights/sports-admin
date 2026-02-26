@@ -350,7 +350,7 @@ export default function UserManagement() {
             <AlertDialogHeader>
               <div className="flex flex-col items-center text-center">
                 <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                  <CheckCircle className="w-10 h-10 text-green-600" />
+                  <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
                 </div>
                 <AlertDialogTitle className="text-2xl font-bold text-slate-900">Successfully Deleted!</AlertDialogTitle>
                 <AlertDialogDescription className="text-slate-600 mt-2">
@@ -422,7 +422,7 @@ export default function UserManagement() {
                     </div>
 
                     {/* User Info */}
-                    <div className="flex-1 min-w-0">
+                    <div className="grow min-w-0">
                       <h3 className="font-semibold text-slate-900 mb-1">{fullName}</h3>
                       <p className="text-sm text-slate-600 mb-2">{user.email}</p>
                       <div className="flex items-center gap-3 text-sm">

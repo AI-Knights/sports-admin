@@ -1,10 +1,16 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Bell, Shield, Mail, Lock, Key, Sun, Moon, Check } from 'lucide-react';
+import { Bell, Shield, Mail, Lock, Key, Sun, Moon, Check, Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { changePasswordSchema, ChangePasswordFormData } from '@/ZoodSchema/change-password-schema';
+import { useChangePasswordMutation } from '@/store/api/auth/auth';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Custom Switch Component
 const Switch = ({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (checked: boolean) => void }) => (
@@ -13,14 +19,12 @@ const Switch = ({ checked, onCheckedChange }: { checked: boolean; onCheckedChang
     role="switch"
     aria-checked={checked}
     onClick={() => onCheckedChange(!checked)}
-    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
-      checked ? 'bg-orange-500' : 'bg-slate-300'
-    }`}
+    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${checked ? 'bg-orange-500' : 'bg-slate-300'
+      }`}
   >
     <span
-      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-        checked ? 'translate-x-6' : 'translate-x-1'
-      }`}
+      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
+        }`}
     />
   </button>
 );
@@ -87,11 +91,35 @@ export default function SettingsPage() {
     }
   });
 
-  const [password, setPassword] = useState({
-    current: '',
-    new: '',
-    confirm: ''
+  const [changePassword, { isLoading: isChangingPassword }] = useChangePasswordMutation();
+  const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
+
+  const passwordForm = useForm<ChangePasswordFormData>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      old_password: '',
+      new_password: '',
+      confirm_password: '',
+    },
+    mode: 'onChange',
   });
+
+  const { formState: { isValid, isDirty } } = passwordForm;
+
+  const onPasswordSubmit = async (data: ChangePasswordFormData) => {
+    setPasswordFeedback(null);
+    try {
+      await changePassword(data).unwrap();
+      setPasswordFeedback({ type: 'success', message: 'Password changed successfully!' });
+      passwordForm.reset();
+    } catch (err: any) {
+      setPasswordFeedback({
+        type: 'error',
+        message: err?.data?.message || err?.data?.detail || 'Failed to change password.'
+      });
+    }
+  };
 
   const [apiKeys, setApiKeys] = useState({
     liveData: 'sk83...xlsdf93ks',
@@ -138,6 +166,8 @@ export default function SettingsPage() {
     alert('Settings saved successfully!');
   };
 
+  const isGeneralSettingsValid = settings.general.siteName.trim() !== '' && settings.general.siteUrl.trim() !== '';
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -146,7 +176,8 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
           <Button
             onClick={handleSaveSettings}
-            className="bg-orange-500 hover:bg-orange-600"
+            disabled={!isGeneralSettingsValid}
+            className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50"
           >
             <Check className="w-4 h-4 mr-2" />
             Save Settings
@@ -294,35 +325,118 @@ export default function SettingsPage() {
             <div className="p-6">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
+                  <Shield className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
                     <h4 className="font-medium text-slate-900 mb-1">Change Password</h4>
-                    <p className="text-sm text-slate-600 mb-3">
+                    <p className="text-sm text-slate-600 mb-4">
                       Update your account password to a safer one
                     </p>
-                    <div className="space-y-3">
-                      <Input
-                        type="password"
-                        placeholder="Current password"
-                        value={password.current}
-                        onChange={(e) => setPassword(prev => ({ ...prev, current: e.target.value }))}
-                        className="bg-white border-amber-200"
-                      />
-                      <Input
-                        type="password"
-                        placeholder="New password"
-                        value={password.new}
-                        onChange={(e) => setPassword(prev => ({ ...prev, new: e.target.value }))}
-                        className="bg-white border-amber-200"
-                      />
-                      <Input
-                        type="password"
-                        placeholder="Confirm new password"
-                        value={password.confirm}
-                        onChange={(e) => setPassword(prev => ({ ...prev, confirm: e.target.value }))}
-                        className="bg-white border-amber-200"
-                      />
-                    </div>
+
+                    <Form {...passwordForm}>
+                      <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                        <AnimatePresence>
+                          {passwordFeedback && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className={`p-3 rounded-md text-xs flex items-center gap-2 ${passwordFeedback.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
+                                }`}
+                            >
+                              {passwordFeedback.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                              {passwordFeedback.message}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        <FormField
+                          control={passwordForm.control}
+                          name="old_password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="relative">
+                                <FormControl>
+                                  <Input
+                                    type={showPasswords.old ? "text" : "password"}
+                                    placeholder="Current password"
+                                    {...field}
+                                    className="bg-white border-amber-200 pr-10"
+                                  />
+                                </FormControl>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPasswords(prev => ({ ...prev, old: !prev.old }))}
+                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                >
+                                  {showPasswords.old ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              </div>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={passwordForm.control}
+                          name="new_password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="relative">
+                                <FormControl>
+                                  <Input
+                                    type={showPasswords.new ? "text" : "password"}
+                                    placeholder="New password"
+                                    {...field}
+                                    className="bg-white border-amber-200 pr-10"
+                                  />
+                                </FormControl>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                >
+                                  {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              </div>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={passwordForm.control}
+                          name="confirm_password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="relative">
+                                <FormControl>
+                                  <Input
+                                    type={showPasswords.confirm ? "text" : "password"}
+                                    placeholder="Confirm new password"
+                                    {...field}
+                                    className="bg-white border-amber-200 pr-10"
+                                  />
+                                </FormControl>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                >
+                                  {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              </div>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+                        <Button
+                          type="submit"
+                          disabled={!isValid || !isDirty || isChangingPassword}
+                          className="bg-orange-500 hover:bg-orange-600 w-full sm:w-auto mt-2"
+                        >
+                          {isChangingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Update Password
+                        </Button>
+                      </form>
+                    </Form>
                   </div>
                 </div>
               </div>

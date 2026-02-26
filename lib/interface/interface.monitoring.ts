@@ -58,3 +58,11 @@ export interface MetricCard {
     trend: 'up' | 'down';
     icon: any;
 }
+
+export interface ServerHistory {
+    timestamp: string;
+    cpu_usage: number;
+    ram_usage: number;
+    avg_response_time: number;
+}
+

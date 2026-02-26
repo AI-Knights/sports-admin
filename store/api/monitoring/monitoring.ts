@@ -1,5 +1,5 @@
 import { api } from "../baseApi";
-import { AdminDashboardStats, UserEngagement } from "@/lib/interface/interface.monitoring";
+import { AdminDashboardStats, UserEngagement, ServerHistory } from "@/lib/interface/interface.monitoring";
 
 const monitoringApi = api.injectEndpoints({
     endpoints: (builder) => ({
@@ -9,7 +9,7 @@ const monitoringApi = api.injectEndpoints({
         getEngagementHistory: builder.query<UserEngagement[], void>({
             query: () => '/monitoring/dashboard/history/engagement/',
         }),
-        getServerHistory: builder.query<void, void>({
+        getServerHistory: builder.query<ServerHistory[], void>({
             query: () => '/monitoring/dashboard/history/server/',
         }),
     }),
