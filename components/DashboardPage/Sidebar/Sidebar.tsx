@@ -20,6 +20,8 @@ type SidebarProps = {
 }
 import image from "@/public/fotboll.png"
 import Image from "next/image"
+import router from "next/router"
+import { useGetProfileQuery } from "@/store/api/auth/auth"
 
 export default function Sidebar({ variant = "desktop" }: SidebarProps) {
   const pathname = usePathname()
@@ -28,7 +30,14 @@ export default function Sidebar({ variant = "desktop" }: SidebarProps) {
     if (href === "/") return pathname === "/"
     return pathname.startsWith(href)
   }
+  const { data } = useGetProfileQuery()
+  console.log({ data })
 
+  const handleLogout = () => {
+    localStorage.removeItem("access")
+    localStorage.removeItem("refresh")
+    router.push("/sign-in")
+  }
   const activeClass = (href: string) =>
     isActive(href) ? "bg-gray-800 text-orange-500" : ""
 
@@ -53,12 +62,23 @@ export default function Sidebar({ variant = "desktop" }: SidebarProps) {
 
 
         <div className="flex items-center rounded-md pl-2 bg-gray-800 py-2 my-8 space-x-2">
-          <Avatar className="h-8 bg-yellow-950 w-8">
-            <AvatarFallback className="bg-transparent">JA</AvatarFallback>
-          </Avatar>
           <div>
-            <p>John Anderson</p>
-            <p className="text-xs">Super Admin</p>
+            {
+              data?.profile_image ? (
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={data?.profile_image} />
+                  <AvatarFallback>{data?.first_name.charAt(0)}</AvatarFallback>
+                </Avatar>
+              ) : (
+                <Avatar className="h-8 bg-yellow-950 w-8">
+                  <AvatarFallback className="bg-transparent">{data?.first_name.charAt(0)}</AvatarFallback>
+                </Avatar>
+              )
+            }
+          </div>
+          <div>
+            <p>{data?.first_name}</p>
+            <p className="text-xs"> {data?.role}</p>
           </div>
         </div>
 
@@ -151,6 +171,7 @@ export default function Sidebar({ variant = "desktop" }: SidebarProps) {
         </Button>
 
         <Button
+          onClick={handleLogout}
           asChild
           variant="ghost"
           className="w-full justify-start text-red-500"

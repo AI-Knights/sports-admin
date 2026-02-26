@@ -20,7 +20,11 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   await mutex.waitForUnlock();
   let result = await baseQuery(args, api, extraOptions);
 
-  if (result.error && result.error.status === 401) {
+  // Check if the current request is for a login-related endpoint
+  const url = typeof args === 'string' ? args : args.url;
+  const isLoginRequest = url?.includes('/auth/login/admin/');
+
+  if (result.error && result.error.status === 401 && !isLoginRequest) {
     if (!mutex.isLocked()) {
       const release = await mutex.acquire();
       try {

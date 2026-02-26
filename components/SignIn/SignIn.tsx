@@ -10,8 +10,8 @@ import Tilt from 'react-parallax-tilt';
 import Image from 'next/image';
 import { SignInFormData, signInSchema } from '@/ZoodSchema/sign-in-schema';
 import { Checkbox } from '@radix-ui/react-checkbox';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import { use, useState } from 'react';
+import { Eye, EyeOff, Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import icon from "@/public/fotboll.png"
 import { useRouter } from 'next/navigation';
 import { useLoginAdminMutation } from '@/store/api/auth/auth';
@@ -21,25 +21,41 @@ export default function SignInPage() {
     resolver: zodResolver(signInSchema),
     defaultValues: { email: '', password: '', rememberMe: false },
   });
-  const [loginAdmin] = useLoginAdminMutation()
+  const [loginAdmin, { isLoading }] = useLoginAdminMutation()
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter()
+
+  // Clear error message when user starts typing
+  const emailValue = form.watch('email');
+  const passwordValue = form.watch('password');
+
+  useEffect(() => {
+    if (errorMessage) {
+      setErrorMessage(null);
+    }
+  }, [emailValue, passwordValue]);
+
   const onSubmit = async (data: SignInFormData) => {
     try {
+      setErrorMessage(null);
       const response = await loginAdmin({ email: data.email, password: data.password }).unwrap();
       console.log(response)
       localStorage.setItem("email", data.email);
 
       router.push("/verify-otp");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      if (err?.data?.detail) {
+        setErrorMessage(err.data.detail);
+      } else {
+        setErrorMessage('An unexpected error occurred. Please try again.');
+      }
     }
   };
 
-
   return (
     <div className="min-h-screen flex flex-col bg-white">
-
       <main className="flex-grow flex items-center justify-center p-4 md:p-8">
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -57,6 +73,21 @@ export default function SignInPage() {
                 <CardDescription className="text-white/90 text-sm">Sign in to manage your platform</CardDescription>
               </CardHeader>
               <CardContent className="p-6">
+                <AnimatePresence mode="wait">
+                  {errorMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                      animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
+                      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md flex items-center gap-3 text-sm">
+                        <AlertCircle className="h-5 w-5 shrink-0" />
+                        <p className="font-medium">{errorMessage}</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
@@ -135,8 +166,19 @@ export default function SignInPage() {
                       <a href="/forgot-password" className="text-orange-500 hover:text-orange-600 hover:underline transition-all duration-300">Forgot password?</a>
                     </div>
                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} transition={{ duration: 0.3 }}>
-                      <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-all duration-300 shadow-md hover:shadow-lg">
-                        Sign In
+                      <Button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Signing In...
+                          </>
+                        ) : (
+                          'Sign In'
+                        )}
                       </Button>
                     </motion.div>
                   </form>
